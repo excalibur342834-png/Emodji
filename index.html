@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Эмоджинариум - Сетевая игра</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- Mode Selection Modal -->
+    <div class="modal" id="modeModal">
+        <div class="modal-content">
+            <h2>Выберите режим игры</h2>
+            <div class="mode-buttons">
+                <button class="mode-btn active" data-mode="single">Одиночная игра</button>
+                <button class="mode-btn" data-mode="network">Сетевая игра</button>
+            </div>
+            
+            <div class="server-settings" id="serverSettings">
+                <div class="form-group">
+                    <label for="playerName">Ваше имя:</label>
+                    <input type="text" id="playerName" placeholder="Введите ваше имя" value="Игрок">
+                </div>
+                <div class="form-group">
+                    <label for="serverUrl">URL сервера:</label>
+                    <input type="text" id="serverUrl" placeholder="ws://localhost:3000" value="ws://localhost:3000">
+                </div>
+                <div class="form-group">
+                    <label for="roomId">ID комнаты:</label>
+                    <input type="text" id="roomId" placeholder="Введите ID комнаты">
+                </div>
+                <div id="networkStatus" class="status-message status-waiting">
+                    Ожидание подключения...
+                </div>
+            </div>
+            
+            <button class="start-btn" id="startBtn">Начать игру</button>
+        </div>
+    </div>
+
+    <!-- Game Interface -->
+    <div class="app">
+        <!-- Game Header -->
+        <div class="game-header" id="gameHeader">
+            <div class="header-top">
+                <div class="game-title">🎭 Эмоджинариум</div>
+                <div class="game-controls">
+                    <button class="control-btn clear-field-btn" id="clearFieldBtn">Очистить поле</button>
+                    <button class="control-btn new-movie-btn" id="newMovieBtn">Новый фильм</button>
+                    <button class="control-btn disconnect-btn" id="disconnectBtn">Отключиться</button>
+                </div>
+            </div>
+            
+            <div class="movie-display" id="movieDisplay">
+                <div class="movie-title" id="movieTitle">Загрузка фильма...</div>
+                <div class="movie-year" id="movieYear"></div>
+                <div class="loading-movie" id="loadingMovie">Получаем фильм из топов Кинопоиска...</div>
+            </div>
+        </div>
+
+        <!-- Game Area -->
+        <div class="container" id="gameContainer">
+            <div class="menu" id="emojiMenu">
+                <h2>📚 Библиотека эмодзи</h2>
+                <div class="sections-container" id="sectionsContainer"></div>
+            </div>
+            
+            <div class="game-field" id="gameField">
+                <div class="field-placeholder">
+                    <div class="icon">🎬</div>
+                    <div>Перетащите эмодзи сюда, чтобы составить сцену из фильма!</div>
+                </div>
+            </div>
+
+            <!-- Chat Section -->
+            <div class="chat-section" id="chatSection">
+                <div class="chat-header">💬 Чат игры</div>
+                <div class="players-list" id="playersList"></div>
+                <div class="chat-messages" id="chatMessages"></div>
+                <div class="chat-input-container">
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Напишите ваш вариант ответа...">
+                    <button class="send-btn" id="sendBtn">Отправить</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="instructions" id="instructions"></div>
+
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
