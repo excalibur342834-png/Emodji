@@ -6,49 +6,6 @@
     <title>Эмоджинариум - Сетевая игра</title>
     <script src="/socket.io/socket.io.js"></script>
     <style>
-        .room-actions {
-    margin-bottom: 15px;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 10px;
-    margin-top: 10px;
-}
-
-.action-btn {
-    flex: 1;
-    padding: 10px;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: bold;
-    transition: all 0.3s;
-}
-
-.create-room-btn {
-    background: #28a745;
-    color: white;
-}
-
-.create-room-btn:hover {
-    background: #218838;
-}
-
-.join-room-btn {
-    background: #007bff;
-    color: white;
-}
-
-.join-room-btn:hover {
-    background: #0056b3;
-}
-
-.action-btn:disabled {
-    background: #6c757d;
-    cursor: not-allowed;
-}
         * {
             margin: 0;
             padding: 0;
@@ -188,6 +145,51 @@
             background: #d1ecf1;
             color: #0c5460;
             border: 1px solid #bee5eb;
+        }
+
+        /* New Room Actions Styles */
+        .room-actions {
+            margin-bottom: 15px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .create-room-btn {
+            background: #28a745;
+            color: white;
+        }
+
+        .create-room-btn:hover {
+            background: #218838;
+        }
+
+        .join-room-btn {
+            background: #007bff;
+            color: white;
+        }
+
+        .join-room-btn:hover {
+            background: #0056b3;
+        }
+
+        .action-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
         }
 
         /* Header Styles */
@@ -737,29 +739,33 @@
                 <button class="mode-btn" data-mode="network">Сетевая игра</button>
             </div>
             
-           <div class="server-settings" id="serverSettings">
-    <div class="form-group">
-        <label for="playerName">Ваше имя:</label>
-        <input type="text" id="playerName" placeholder="Введите ваше имя" value="Игрок">
-    </div>
-    
-    <div class="room-actions">
-        <div class="form-group">
-            <label for="roomId">ID комнаты:</label>
-            <input type="text" id="roomId" placeholder="Введите ID комнаты">
-        </div>
-        
-        <div class="action-buttons">
-            <button class="action-btn create-room-btn" id="createRoomBtn">Создать комнату</button>
-            <button class="action-btn join-room-btn" id="joinRoomBtn">Присоединиться</button>
-        </div>
-    </div>
-    
-    <div id="networkStatus" class="status-message status-waiting">
-        Выберите действие...
-    </div>
-</div>
+            <div class="server-settings" id="serverSettings">
+                <div class="form-group">
+                    <label for="playerName">Ваше имя:</label>
+                    <input type="text" id="playerName" placeholder="Введите ваше имя" value="Игрок">
+                </div>
+                
+                <div class="room-actions">
+                    <div class="form-group">
+                        <label for="roomId">ID комнаты:</label>
+                        <input type="text" id="roomId" placeholder="Введите ID комнаты">
+                    </div>
+                    
+                    <div class="action-buttons">
+                        <button class="action-btn create-room-btn" id="createRoomBtn">Создать комнату</button>
+                        <button class="action-btn join-room-btn" id="joinRoomBtn">Присоединиться</button>
+                    </div>
+                </div>
+                
+                <div id="networkStatus" class="status-message status-waiting">
+                    Выберите действие...
+                </div>
+            </div>
             
+            <button class="start-btn" id="startBtn">Начать одиночную игру</button>
+        </div>
+    </div>
+
     <!-- Game Interface -->
     <div class="app">
         <!-- Game Header -->
@@ -1031,153 +1037,120 @@
                 this.initModal();
             }
 
-          initModal() {
-    const modal = document.getElementById('modeModal');
-    const modeBtns = document.querySelectorAll('.mode-btn');
-    const serverSettings = document.getElementById('serverSettings');
-    const startBtn = document.getElementById('startBtn');
-    const statusElement = document.getElementById('networkStatus');
-    const createRoomBtn = document.getElementById('createRoomBtn');
-    const joinRoomBtn = document.getElementById('joinRoomBtn');
-    const roomIdInput = document.getElementById('roomId');
+            initModal() {
+                const modal = document.getElementById('modeModal');
+                const modeBtns = document.querySelectorAll('.mode-btn');
+                const serverSettings = document.getElementById('serverSettings');
+                const startBtn = document.getElementById('startBtn');
+                const statusElement = document.getElementById('networkStatus');
+                const createRoomBtn = document.getElementById('createRoomBtn');
+                const joinRoomBtn = document.getElementById('joinRoomBtn');
+                const roomIdInput = document.getElementById('roomId');
 
-    modeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            modeBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            this.gameMode = btn.dataset.mode;
-            
-            if (this.gameMode === 'network') {
-                serverSettings.classList.add('active');
-                statusElement.textContent = 'Выберите действие...';
-                statusElement.className = 'status-message status-waiting';
-            } else {
-                serverSettings.classList.remove('active');
-            }
-        });
-    });
-
-    // Создание комнаты
-    createRoomBtn.addEventListener('click', async () => {
-        const playerName = document.getElementById('playerName').value;
-        let roomId = roomIdInput.value.trim();
-
-        if (!roomId) {
-            // Автоматически генерируем ID если не введен
-            roomId = 'room_' + Math.random().toString(36).substr(2, 8);
-            roomIdInput.value = roomId;
-        }
-
-        if (!playerName) {
-            statusElement.textContent = 'Введите ваше имя!';
-            return;
-        }
-
-        statusElement.textContent = 'Создаем комнату...';
-        createRoomBtn.disabled = true;
-        joinRoomBtn.disabled = true;
-
-        try {
-            const result = await this.network.connect(roomId, playerName);
-            
-            if (result.success) {
-                this.isHost = true;
-                statusElement.textContent = `Комната создана! ID: ${roomId}`;
-                statusElement.className = 'status-message status-connected';
-                
-                // Показываем ID комнаты для других игроков
-                roomIdInput.disabled = true;
-                
-                // Автоматически запускаем игру для хоста
-                setTimeout(() => {
-                    this.startNetworkGame();
-                }, 2000);
-            }
-        } catch (error) {
-            statusElement.textContent = 'Ошибка создания комнаты!';
-            createRoomBtn.disabled = false;
-            joinRoomBtn.disabled = false;
-        }
-    });
-
-    // Присоединение к комнате
-    joinRoomBtn.addEventListener('click', async () => {
-        const roomId = roomIdInput.value.trim();
-        const playerName = document.getElementById('playerName').value;
-
-        if (!roomId) {
-            statusElement.textContent = 'Введите ID комнаты!';
-            return;
-        }
-
-        if (!playerName) {
-            statusElement.textContent = 'Введите ваше имя!';
-            return;
-        }
-
-        statusElement.textContent = 'Присоединяемся к комнате...';
-        createRoomBtn.disabled = true;
-        joinRoomBtn.disabled = true;
-
-        try {
-            const result = await this.network.connect(roomId, playerName);
-            
-            if (result.success) {
-                this.isHost = false;
-                statusElement.textContent = 'Успешно присоединились!';
-                statusElement.className = 'status-message status-connected';
-                
-                // Автоматически переходим в игру
-                setTimeout(() => {
-                    this.startNetworkGame();
-                }, 1000);
-            }
-        } catch (error) {
-            statusElement.textContent = 'Не удалось присоединиться! Проверьте ID комнаты.';
-            createRoomBtn.disabled = false;
-            joinRoomBtn.disabled = false;
-        }
-    });
-
-    // Старая кнопка "Начать игру" теперь для одиночного режима
-    startBtn.addEventListener('click', async () => {
-        if (this.gameMode === 'single') {
-            this.startSingleGame();
-        }
-        // Для сетевого режима кнопка не используется
-    });
-}
-
-                startBtn.addEventListener('click', async () => {
-                    if (this.gameMode === 'network') {
-                        const roomId = document.getElementById('roomId').value;
-                        const playerName = document.getElementById('playerName').value;
-
-                        if (!roomId) {
-                            statusElement.textContent = 'Введите ID комнаты!';
+                modeBtns.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        modeBtns.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.gameMode = btn.dataset.mode;
+                        
+                        if (this.gameMode === 'network') {
+                            serverSettings.classList.add('active');
+                            statusElement.textContent = 'Выберите действие...';
                             statusElement.className = 'status-message status-waiting';
-                            return;
+                        } else {
+                            serverSettings.classList.remove('active');
                         }
+                    });
+                });
 
-                        statusElement.textContent = 'Подключаемся...';
-                        statusElement.className = 'status-message status-waiting';
+                // Создание комнаты
+                createRoomBtn.addEventListener('click', async () => {
+                    const playerName = document.getElementById('playerName').value;
+                    let roomId = roomIdInput.value.trim();
 
-                        try {
-                            const result = await this.network.connect(roomId, playerName);
+                    if (!roomId) {
+                        // Автоматически генерируем ID если не введен
+                        roomId = 'room_' + Math.random().toString(36).substr(2, 8);
+                        roomIdInput.value = roomId;
+                    }
+
+                    if (!playerName) {
+                        statusElement.textContent = 'Введите ваше имя!';
+                        return;
+                    }
+
+                    statusElement.textContent = 'Создаем комнату...';
+                    createRoomBtn.disabled = true;
+                    joinRoomBtn.disabled = true;
+
+                    try {
+                        const result = await this.network.connect(roomId, playerName);
+                        
+                        if (result.success) {
+                            this.isHost = true;
+                            statusElement.textContent = `Комната создана! ID: ${roomId}`;
+                            statusElement.className = 'status-message status-connected';
                             
-                            if (result.success) {
-                                this.isHost = result.isHost;
-                                statusElement.textContent = 'Успешно подключено!';
-                                statusElement.className = 'status-message status-connected';
+                            // Показываем ID комнаты для других игроков
+                            roomIdInput.disabled = true;
+                            
+                            // Автоматически запускаем игру для хоста
+                            setTimeout(() => {
                                 this.startNetworkGame();
-                            }
-                        } catch (error) {
-                            statusElement.textContent = 'Ошибка подключения!';
-                            statusElement.className = 'status-message status-waiting';
+                            }, 2000);
                         }
-                    } else {
+                    } catch (error) {
+                        statusElement.textContent = 'Ошибка создания комнаты!';
+                        createRoomBtn.disabled = false;
+                        joinRoomBtn.disabled = false;
+                    }
+                });
+
+                // Присоединение к комнате
+                joinRoomBtn.addEventListener('click', async () => {
+                    const roomId = roomIdInput.value.trim();
+                    const playerName = document.getElementById('playerName').value;
+
+                    if (!roomId) {
+                        statusElement.textContent = 'Введите ID комнаты!';
+                        return;
+                    }
+
+                    if (!playerName) {
+                        statusElement.textContent = 'Введите ваше имя!';
+                        return;
+                    }
+
+                    statusElement.textContent = 'Присоединяемся к комнате...';
+                    createRoomBtn.disabled = true;
+                    joinRoomBtn.disabled = true;
+
+                    try {
+                        const result = await this.network.connect(roomId, playerName);
+                        
+                        if (result.success) {
+                            this.isHost = false;
+                            statusElement.textContent = 'Успешно присоединились!';
+                            statusElement.className = 'status-message status-connected';
+                            
+                            // Автоматически переходим в игру
+                            setTimeout(() => {
+                                this.startNetworkGame();
+                            }, 1000);
+                        }
+                    } catch (error) {
+                        statusElement.textContent = 'Не удалось присоединиться! Проверьте ID комнаты.';
+                        createRoomBtn.disabled = false;
+                        joinRoomBtn.disabled = false;
+                    }
+                });
+
+                // Старая кнопка "Начать игру" теперь для одиночного режима
+                startBtn.addEventListener('click', async () => {
+                    if (this.gameMode === 'single') {
                         this.startSingleGame();
                     }
+                    // Для сетевого режима кнопка не используется
                 });
             }
 
