@@ -40,7 +40,8 @@ io.on('connection', (socket) => {
         players: new Map(),
         host: socket.id,
         currentMovie: null,
-        gameState: 'waiting'
+        gameState: 'waiting',
+        gameObjects: [] // ← ДОБАВЛЕНО: храним игровые объекты
       });
     }
 
@@ -63,6 +64,13 @@ io.on('connection', (socket) => {
     // Join socket room
     socket.join(roomId);
 
+    // Send current game state to new player
+    socket.emit('room_state', {
+      movie: room.currentMovie,
+      gameObjects: room.gameObjects,
+      players: Array.from(room.players.values())
+    });
+
     // Notify room about new player
     io.to(roomId).emit('player_joined', {
       player: room.players.get(socket.id),
@@ -70,6 +78,69 @@ io.on('connection', (socket) => {
     });
 
     console.log(`Player ${playerName} joined room ${roomId}`);
+  });
+
+  // ДОБАВЛЕНО: Синхронизация игровых объектов
+  socket.on('game_object_added', (data) => {
+    const player = players.get(socket.id);
+    if (!player) return;
+
+    const room = rooms.get(player.roomId);
+    if (!room) return;
+
+    // Сохраняем объект в комнате
+    room.gameObjects.push(data.object);
+    
+    // Отправляем всем игрокам кроме отправителя
+    socket.to(player.roomId).emit('game_object_added', data);
+  });
+
+  // ДОБАВЛЕНО: Удаление игрового объекта
+  socket.on('game_object_removed', (data) => {
+    const player = players.get(socket.id);
+    if (!player) return;
+
+    const room = rooms.get(player.roomId);
+    if (!room) return;
+
+    // Удаляем объект из комнаты
+    room.gameObjects = room.gameObjects.filter(obj => obj.id !== data.objectId);
+    
+    // Отправляем всем игрокам кроме отправителя
+    socket.to(player.roomId).emit('game_object_removed', data);
+  });
+
+  // ДОБАВЛЕНО: Обновление игрового объекта
+  socket.on('game_object_updated', (data) => {
+    const player = players.get(socket.id);
+    if (!player) return;
+
+    const room = rooms.get(player.roomId);
+    if (!room) return;
+
+    // Обновляем объект в комнате
+    const objIndex = room.gameObjects.findIndex(obj => obj.id === data.object.id);
+    if (objIndex !== -1) {
+      room.gameObjects[objIndex] = data.object;
+    }
+    
+    // Отправляем всем игрокам кроме отправителя
+    socket.to(player.roomId).emit('game_object_updated', data);
+  });
+
+  // ДОБАВЛЕНО: Очистка игрового поля
+  socket.on('clear_game_field', (data) => {
+    const player = players.get(socket.id);
+    if (!player) return;
+
+    const room = rooms.get(player.roomId);
+    if (!room) return;
+
+    // Очищаем все объекты
+    room.gameObjects = [];
+    
+    // Отправляем всем игрокам кроме отправителя
+    socket.to(player.roomId).emit('clear_game_field', data);
   });
 
   socket.on('chat_message', (data) => {
@@ -178,6 +249,7 @@ io.on('connection', (socket) => {
         // Remove room if empty
         if (room.players.size === 0) {
           rooms.delete(player.roomId);
+          console.log(`Room ${player.roomId} deleted (empty)`);
         }
       }
       
