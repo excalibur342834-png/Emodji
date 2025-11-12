@@ -13,71 +13,46 @@ const io = socketIo(server, {
   }
 });
 
+// Middleware
 app.use(cors());
 app.use(express.static('public'));
 
+// Serve the main HTML file
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Game state
 const rooms = new Map();
 const players = new Map();
 
+// Socket.io connection handling
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
-
-  socket.on('create_room', (data) => {
-    const { playerName } = data;
-    const roomId = 'room_' + Math.random().toString(36).substr(2, 8);
-    
-    rooms.set(roomId, {
-      id: roomId,
-      players: new Map(),
-      host: socket.id,
-      currentMovie: null,
-      gameState: 'waiting',
-      gameObjects: []
-    });
-
-    const room = rooms.get(roomId);
-    
-    room.players.set(socket.id, {
-      id: socket.id,
-      name: playerName,
-      score: 0,
-      isHost: true
-    });
-
-    players.set(socket.id, {
-      id: socket.id,
-      name: playerName,
-      roomId: roomId
-    });
-
-    socket.join(roomId);
-
-    console.log(`Room ${roomId} created by ${playerName}`);
-
-    socket.emit('room_created', {
-      roomId: roomId,
-      player: room.players.get(socket.id)
-    });
-  });
 
   socket.on('join_room', (data) => {
     const { roomId, playerName } = data;
     
-    const room = rooms.get(roomId);
-    if (!room) {
-      socket.emit('join_error', { message: 'Комната не найдена' });
-      return;
+    // Create room if it doesn't exist
+    if (!rooms.has(roomId)) {
+      rooms.set(roomId, {
+        id: roomId,
+        players: new Map(),
+        host: socket.id,
+        currentMovie: null,
+        gameState: 'waiting',
+        gameObjects: []
+      });
     }
 
+    const room = rooms.get(roomId);
+    
+    // Add player to room
     room.players.set(socket.id, {
       id: socket.id,
       name: playerName,
       score: 0,
-      isHost: false
+      isHost: socket.id === room.host
     });
 
     players.set(socket.id, {
@@ -86,14 +61,17 @@ io.on('connection', (socket) => {
       roomId: roomId
     });
 
+    // Join socket room
     socket.join(roomId);
 
+    // Send current game state to new player
     socket.emit('room_state', {
       movie: room.currentMovie,
       gameObjects: room.gameObjects,
       players: Array.from(room.players.values())
     });
 
+    // Notify room about new player
     io.to(roomId).emit('player_joined', {
       player: room.players.get(socket.id),
       players: Array.from(room.players.values())
@@ -102,6 +80,7 @@ io.on('connection', (socket) => {
     console.log(`Player ${playerName} joined room ${roomId}`);
   });
 
+  // Game object synchronization
   socket.on('game_object_added', (data) => {
     const player = players.get(socket.id);
     if (!player) return;
@@ -110,7 +89,7 @@ io.on('connection', (socket) => {
     if (!room) return;
 
     room.gameObjects.push(data.object);
-    io.to(player.roomId).emit('game_object_added', data);
+    socket.to(player.roomId).emit('game_object_added', data);
   });
 
   socket.on('game_object_removed', (data) => {
@@ -121,7 +100,7 @@ io.on('connection', (socket) => {
     if (!room) return;
 
     room.gameObjects = room.gameObjects.filter(obj => obj.id !== data.objectId);
-    io.to(player.roomId).emit('game_object_removed', data);
+    socket.to(player.roomId).emit('game_object_removed', data);
   });
 
   socket.on('game_object_updated', (data) => {
@@ -136,7 +115,7 @@ io.on('connection', (socket) => {
       room.gameObjects[objIndex] = data.object;
     }
     
-    io.to(player.roomId).emit('game_object_updated', data);
+    socket.to(player.roomId).emit('game_object_updated', data);
   });
 
   socket.on('clear_game_field', (data) => {
@@ -147,40 +126,10 @@ io.on('connection', (socket) => {
     if (!room) return;
 
     room.gameObjects = [];
-    io.to(player.roomId).emit('clear_game_field', data);
+    socket.to(player.roomId).emit('clear_game_field', data);
   });
 
-  socket.on('start_game', (data) => {
-    const player = players.get(socket.id);
-    if (!player) return;
-
-    const room = rooms.get(player.roomId);
-    if (!room || room.host !== socket.id) return;
-
-    const movies = [
-      { title: "Титаник", year: "1997" },
-      { title: "Матрица", year: "1999" },
-      { title: "Властелин Колец", year: "2001" },
-      { title: "Гарри Поттер", year: "2001" },
-      { title: "Звездные Войны", year: "1977" },
-      { title: "Аватар", year: "2009" },
-      { title: "Король Лев", year: "1994" },
-      { title: "Пираты Карибского моря", year: "2003" },
-      { title: "Холодное Сердце", year: "2013" },
-      { title: "Назад в будущее", year: "1985" }
-    ];
-
-    room.currentMovie = movies[Math.floor(Math.random() * movies.length)];
-    room.gameState = 'playing';
-
-    socket.emit('movie_reveal', room.currentMovie);
-    socket.to(player.roomId).emit('game_started', {
-      message: "Игра началась! Создатель составляет сцену из фильма. Угадайте фильм!"
-    });
-
-    console.log(`Game started in room ${player.roomId} with movie: ${room.currentMovie.title}`);
-  });
-
+  // Chat messages
   socket.on('chat_message', (data) => {
     const player = players.get(socket.id);
     if (!player) return;
@@ -196,6 +145,7 @@ io.on('connection', (socket) => {
       timestamp: Date.now()
     };
 
+    // Check if message contains correct answer
     if (room.currentMovie && room.gameState === 'playing') {
       const userAnswer = data.message.toLowerCase().replace(/["«»]/g, '');
       const correctAnswer = room.currentMovie.title.toLowerCase();
@@ -203,6 +153,7 @@ io.on('connection', (socket) => {
       if (userAnswer.includes(correctAnswer) || correctAnswer.includes(userAnswer)) {
         messageData.isCorrect = true;
         
+        // Update player score
         const playerData = room.players.get(socket.id);
         if (playerData) {
           playerData.score += 1;
@@ -220,6 +171,43 @@ io.on('connection', (socket) => {
     io.to(player.roomId).emit('chat_message', messageData);
   });
 
+  // Game management
+  socket.on('start_game', (data) => {
+    const player = players.get(socket.id);
+    if (!player) return;
+
+    const room = rooms.get(player.roomId);
+    if (!room || room.host !== socket.id) return;
+
+    // Set random movie
+    const movies = [
+      { title: "Титаник", year: "1997" },
+      { title: "Матрица", year: "1999" },
+      { title: "Властелин Колец", year: "2001" },
+      { title: "Гарри Поттер", year: "2001" },
+      { title: "Звездные Войны", year: "1977" },
+      { title: "Аватар", year: "2009" },
+      { title: "Король Лев", year: "1994" },
+      { title: "Пираты Карибского моря", year: "2003" },
+      { title: "Холодное Сердце", year: "2013" },
+      { title: "Назад в будущее", year: "1985" }
+    ];
+
+    room.currentMovie = movies[Math.floor(Math.random() * movies.length)];
+    room.gameState = 'playing';
+
+    // Reveal movie only to host
+    socket.emit('movie_reveal', room.currentMovie);
+    
+    // Notify other players that game has started
+    socket.to(player.roomId).emit('game_started', {
+      message: "Игра началась! Создатель составляет сцену из фильма. Угадайте фильм!"
+    });
+
+    console.log(`Game started in room ${player.roomId} with movie: ${room.currentMovie.title}`);
+  });
+
+  // Disconnection handling
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
     
@@ -229,6 +217,7 @@ io.on('connection', (socket) => {
       if (room) {
         room.players.delete(socket.id);
         
+        // If host disconnected, assign new host
         if (room.host === socket.id && room.players.size > 0) {
           const newHostId = Array.from(room.players.keys())[0];
           room.host = newHostId;
@@ -240,11 +229,13 @@ io.on('connection', (socket) => {
           });
         }
 
+        // Notify room about player leaving
         io.to(player.roomId).emit('player_left', {
           playerId: socket.id,
           players: Array.from(room.players.values())
         });
 
+        // Remove room if empty
         if (room.players.size === 0) {
           rooms.delete(player.roomId);
           console.log(`Room ${player.roomId} deleted (empty)`);
