@@ -16,6 +16,7 @@ body {
     margin: 0 auto;
 }
 
+/* Modal Styles */
 .modal {
     display: flex;
     position: fixed;
@@ -138,6 +139,7 @@ body {
     border: 1px solid #bee5eb;
 }
 
+/* Room Actions Styles */
 .room-actions {
     margin-bottom: 15px;
 }
@@ -191,6 +193,7 @@ body {
     cursor: not-allowed;
 }
 
+/* Header Styles */
 .game-header {
     background: white;
     padding: 20px;
@@ -260,6 +263,7 @@ body {
     transform: translateY(-2px);
 }
 
+/* Movie Display */
 .movie-display {
     background: linear-gradient(135deg, #ff6b6b, #ee5a24);
     color: white;
@@ -287,6 +291,7 @@ body {
     opacity: 0.8;
 }
 
+/* Game Area */
 .container {
     display: flex;
     gap: 20px;
@@ -403,6 +408,7 @@ body {
     opacity: 0.5;
 }
 
+/* Game Field */
 .game-field {
     flex: 1;
     min-height: 600px;
@@ -440,6 +446,7 @@ body {
     box-shadow: 0 8px 25px rgba(0,0,0,0.3);
 }
 
+/* Chat Section */
 .chat-section {
     width: 320px;
     background: white;
@@ -579,6 +586,7 @@ body {
     background: #0056b3;
 }
 
+/* Controls for game objects */
 .object-controls {
     position: absolute;
     top: 0;
@@ -628,6 +636,7 @@ body {
     transform: scale(1.2);
 }
 
+/* Instructions */
 .instructions {
     margin-top: 20px;
     text-align: center;
@@ -643,6 +652,7 @@ body {
     display: block;
 }
 
+/* Scrollbar Styles */
 .sections-container::-webkit-scrollbar,
 .chat-messages::-webkit-scrollbar,
 .players-list::-webkit-scrollbar {
@@ -703,6 +713,7 @@ body {
     white-space: nowrap;
 }
 
+/* Placeholder for empty field */
 .field-placeholder {
     position: absolute;
     top: 50%;
