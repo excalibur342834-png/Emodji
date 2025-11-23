@@ -7,8 +7,6 @@ export class UIManager {
         this.sectionsContainer = sectionsContainer;  
     }  
   
-    // --- 1. УПРАВЛЕНИЕ ЭКРАНАМИ И КНОПКАМИ (FIXED) ---  
-  
     showScreen(screen) {  
         const modal = document.getElementById('modeModal');  
         const gameHeader = document.getElementById('gameHeader');  
@@ -26,7 +24,6 @@ export class UIManager {
             instructions.classList.remove('active');  
             modal.style.display = 'flex';  
   
-            // ВАЖНО: Сбрасываем блокировку кнопок при выходе в меню  
             document.getElementById('createRoomBtn').disabled = false;  
             document.getElementById('joinRoomBtn').disabled = false;  
             const status = document.getElementById('networkStatus');  
@@ -35,8 +32,6 @@ export class UIManager {
         }  
     }  
   
-    // --- 2. ОТОБРАЖЕНИЕ ID КОМНАТЫ (NEW) ---  
-  
     updateRoomIdDisplay(roomId) {  
         const badge = document.getElementById('roomInfoBadge');  
         const display = document.getElementById('currentRoomIdDisplay');  
@@ -44,8 +39,6 @@ export class UIManager {
         if (roomId) {  
             badge.style.display = 'inline-block';  
             display.textContent = roomId;  
-              
-            // Копирование по клику  
             badge.onclick = () => {  
                 navigator.clipboard.writeText(roomId).then(() => {  
                     const old = display.textContent;  
@@ -57,8 +50,6 @@ export class UIManager {
             badge.style.display = 'none';  
         }  
     }  
-  
-    // --- 3. ИНИЦИАЛИЗАЦИЯ МЕНЮ ---  
   
     initModal(onCreate, onJoin, onSingle) {  
         const modeBtns = document.querySelectorAll('.mode-btn');  
@@ -79,36 +70,20 @@ export class UIManager {
         createBtn.addEventListener('click', async () => {  
             const name = document.getElementById('playerName').value.trim();  
             if (!name) return status.textContent = 'Введите имя!';  
-              
             status.textContent = 'Создание...';  
-            createBtn.disabled = true;   
-            joinBtn.disabled = true;  
-  
-            try {  
-                await onCreate(name, status);  
-            } catch (e) {  
-                status.textContent = 'Ошибка!';  
-                createBtn.disabled = false;   
-                joinBtn.disabled = false;  
-            }  
+            createBtn.disabled = true; joinBtn.disabled = true;  
+            try { await onCreate(name, status); }  
+            catch (e) { status.textContent = 'Ошибка!'; createBtn.disabled = false; joinBtn.disabled = false; }  
         });  
   
         joinBtn.addEventListener('click', async () => {  
             const roomId = document.getElementById('roomId').value.trim();  
             const name = document.getElementById('playerName').value.trim();  
             if (!roomId || !name) return status.textContent = 'Введите ID и имя!';  
-  
             status.textContent = 'Подключение...';  
-            createBtn.disabled = true;  
-            joinBtn.disabled = true;  
-  
-            try {  
-                await onJoin(roomId, name, status);  
-            } catch (e) {  
-                status.textContent = e.message || 'Ошибка входа';  
-                createBtn.disabled = false;   
-                joinBtn.disabled = false;  
-            }  
+            createBtn.disabled = true; joinBtn.disabled = true;  
+            try { await onJoin(roomId, name, status); }  
+            catch (e) { status.textContent = e.message || 'Ошибка входа'; createBtn.disabled = false; joinBtn.disabled = false; }  
         });  
   
         document.getElementById('startBtn').addEventListener('click', () => {  
@@ -116,12 +91,9 @@ export class UIManager {
         });  
     }  
   
-    // --- 4. ЧАТ И СПИСКИ ---  
-  
     initChat(onSend) {  
         const input = document.getElementById('chatInput');  
         const btn = document.getElementById('sendBtn');  
-          
         const send = () => {  
             if (input.value.trim()) {  
                 onSend(input.value.trim());  
@@ -141,18 +113,31 @@ export class UIManager {
         box.scrollTop = box.scrollHeight;  
     }  
   
+    // ОБНОВЛЕННЫЙ СПИСОК ИГРОКОВ С АВАТАРКАМИ  
     updatePlayersList(players, isHost, onCorrectMark) {  
         const list = document.getElementById('playersList');  
         list.innerHTML = '';  
+          
         players.forEach(p => {  
             const item = document.createElement('div');  
             item.className = 'player-item';  
-            item.innerHTML = `<span>$${p.name} $${p.isHost ? '👑' : ''}</span> <span>${p.score}</span>`;  
               
-            // Кнопка для хоста  
+            // Генерация робота-аватара по имени  
+            const avatarUrl = `https://api.dicebear.com/7.x/bottts/svg?seed=${p.name}`;  
+  
+            item.innerHTML = `  
+                <img src="${avatarUrl}" class="player-avatar" alt="Avatar">  
+                <div class="player-info">  
+                    <div class="player-name">$${p.name} $${p.isHost ? '👑' : ''}</div>  
+                    <div class="player-role">${p.isHost ? 'Ведущий' : 'Игрок'}</div>  
+                </div>  
+                <span class="player-score">${p.score}</span>  
+            `;  
+              
             if (isHost && !p.isHost && onCorrectMark) {  
                 const btn = document.createElement('button');  
                 btn.textContent = '✅';  
+                btn.title = 'Засчитать ответ';  
                 btn.className = 'correct-btn';  
                 btn.onclick = () => onCorrectMark(p.id);  
                 item.appendChild(btn);  
@@ -161,11 +146,9 @@ export class UIManager {
         });  
     }  
   
-    // --- 5. МЕНЮ ЭМОДЗИ ---  
-  
-    initSections(categories, dragHandler) {  
+    initSections(categories) {  
         this.sectionsContainer.innerHTML = '';  
-        categories.forEach((cat, idx) => {  
+        categories.forEach((cat) => {  
             const section = document.createElement('div');  
             section.className = 'section';  
               
@@ -182,7 +165,7 @@ export class UIManager {
             const content = document.createElement('div');  
             content.className = 'section-content';  
               
-            cat.emojis.slice(0, 20).forEach(emoji => {  
+            cat.emojis.forEach(emoji => {  
                 const item = document.createElement('div');  
                 item.className = 'menu-item';  
                 item.textContent = emoji;  
@@ -200,16 +183,32 @@ export class UIManager {
         });  
     }  
   
-    // --- 6. ВСПОМОГАТЕЛЬНЫЕ ---  
-  
     toggleUIForHost(isHost) {  
-        document.getElementById('emojiMenu').classList.toggle('hidden', !isHost);  
+        const menu = document.getElementById('emojiMenu');  
+        const chatSection = document.getElementById('chatSection');  
+          
+        // 1. Меню эмодзи видит только хост  
+        if (isHost) {  
+            menu.classList.remove('hidden');  
+        } else {  
+            menu.classList.add('hidden');  
+        }  
+  
+        // 2. Чат видят ВСЕ в сетевой игре (но скрываем в одиночной, если надо)  
+        // Логика "показывать чат" перенесена в toggleChat, здесь только управление инструментами хоста  
+  
+        // 3. Кнопки управления  
         document.getElementById('newMovieBtn').style.display = isHost ? 'block' : 'none';  
         document.getElementById('clearFieldBtn').style.display = isHost ? 'block' : 'none';  
-        // Если не хост - скрываем информацию о фильме  
+  
         if (!isHost) {  
             document.getElementById('movieTitle').textContent = '???';  
             document.getElementById('movieYear').textContent = '';  
         }  
+    }  
+  
+    toggleChat(isVisible) {  
+        const chat = document.getElementById('chatSection');  
+        chat.style.display = isVisible ? 'flex' : 'none';  
     }  
 }  
