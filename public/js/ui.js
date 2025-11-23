@@ -76,6 +76,29 @@ export class UIManager {
         });
     }
 
+    updateRoomIdDisplay(roomId) {  
+    const badge = document.getElementById('roomInfoBadge');  
+    const display = document.getElementById('currentRoomIdDisplay');  
+      
+    if (roomId) {  
+        badge.style.display = 'inline-block';  
+        display.textContent = roomId;  
+          
+        // Добавляем копирование по клику  
+        badge.onclick = () => {  
+            navigator.clipboard.writeText(roomId).then(() => {  
+                const originalText = display.textContent;  
+                display.textContent = "Скопировано!";  
+                setTimeout(() => {  
+                    display.textContent = originalText;  
+                }, 1500);  
+            });  
+        };  
+    } else {  
+        badge.style.display = 'none';  
+    }  
+}  
+    
     toggleSection(header) {
         const section = header.parentElement;
         const content = header.nextElementSibling;
