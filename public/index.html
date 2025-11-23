@@ -47,22 +47,32 @@
     <!-- Game Interface -->
     <div class="app">
         <!-- Game Header -->
-        <div class="game-header" id="gameHeader">
-            <div class="header-top">
-                <div class="game-title">🎭 Эмоджинариум</div>
-                <div class="game-controls">
-                    <button class="control-btn clear-field-btn" id="clearFieldBtn">Очистить поле</button>
-                    <button class="control-btn new-movie-btn" id="newMovieBtn">Новый фильм</button>
-                    <button class="control-btn disconnect-btn" id="disconnectBtn">Отключиться</button>
-                </div>
-            </div>
-            
-            <div class="movie-display" id="movieDisplay">
-                <div class="movie-title" id="movieTitle">Загрузка фильма...</div>
-                <div class="movie-year" id="movieYear"></div>
-                <div class="loading-movie" id="loadingMovie">Получаем фильм из топов Кинопоиска...</div>
-            </div>
-        </div>
+       <!-- public/index.html -->  
+<div class="game-header" id="gameHeader">  
+    <div class="header-top">  
+        <div class="header-left">  
+            <div class="game-title">🎭 Эмоджинариум</div>  
+            <!-- ДОБАВЛЕНО: Блок для ID комнаты -->  
+            <div class="room-info-badge" id="roomInfoBadge" style="display: none;">  
+                ID: <span id="currentRoomIdDisplay">---</span> 📋  
+            </div>  
+        </div>  
+        <div class="game-controls">  
+            <!-- Кнопки остаются без изменений -->  
+            <button class="control-btn clear-field-btn" id="clearFieldBtn">Очистить поле</button>  
+            <button class="control-btn new-movie-btn" id="newMovieBtn">Новый фильм</button>  
+            <button class="control-btn disconnect-btn" id="disconnectBtn">Отключиться</button>  
+        </div>  
+    </div>  
+      
+    <div class="movie-display" id="movieDisplay">  
+        <!-- Без изменений -->  
+        <div class="movie-title" id="movieTitle">Загрузка фильма...</div>  
+        <div class="movie-year" id="movieYear"></div>  
+        <div class="loading-movie" id="loadingMovie">Получаем фильм из топов Кинопоиска...</div>  
+    </div>  
+</div>  
+
 
         <!-- Game Area -->
         <div class="container" id="gameContainer">
