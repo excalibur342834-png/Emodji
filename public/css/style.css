@@ -203,20 +203,27 @@ body {
     display: none;
 }
 
-.header-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
+.header-top {  
+    display: flex;  
+    justify-content: space-between;  
+    align-items: center;  
+    margin-bottom: 15px;  
 }
 
+.header-left {  
+    display: flex;  
+    flex-direction: column;  
+    align-items: flex-start;  
+    flex: 1;  
+}  
+
 .game-title {
-    font-size: 32px;
-    font-weight: bold;
-    color: #333;
-    text-align: center;
-    flex: 1;
-}
+  font-size: 32px;  
+    font-weight: bold;  
+    color: #333;  
+    margin-bottom: 5px; /* Добавили отступ снизу */  
+    text-align: left; /* Выравниваем по левому краю */  
+}  
 
 .game-controls {
     display: flex;
@@ -712,6 +719,24 @@ body {
     font-size: 10px;
     white-space: nowrap;
 }
+
+.room-info-badge {  
+    background: #e7f3ff;  
+    border: 1px solid #007bff;  
+    color: #007bff;  
+    padding: 5px 12px;  
+    border-radius: 15px;  
+    font-weight: bold;  
+    font-size: 14px;  
+    cursor: pointer;  
+    transition: all 0.2s;  
+    display: inline-block;  
+}  
+  
+.room-info-badge:hover {  
+    background: #007bff;  
+    color: white;  
+}  
 
 /* Placeholder for empty field */
 .field-placeholder {
