@@ -1,38 +1,33 @@
 const express = require('express');  
 const http = require('http');  
-const { Server } = require('socket.io'); // Обновленный импорт  
+const { Server } = require('socket.io'); // Используем современный импорт  
 const path = require('path');  
 const cors = require('cors');  
   
 const app = express();  
 const server = http.createServer(app);  
-  
-// Настройка Socket.io с CORS  
 const io = new Server(server, {  
-  cors: {  
-    origin: "*",  
-    methods: ["GET", "POST"]  
-  }  
+  cors: { origin: "*", methods: ["GET", "POST"] }  
 });  
   
 app.use(cors());  
-app.use(express.static(path.join(__dirname, 'public'))); // Более надежный путь  
+app.use(express.static(path.join(__dirname, 'public')));  
   
 app.get('/', (req, res) => {  
   res.sendFile(path.join(__dirname, 'public', 'index.html'));  
 });  
   
-// Хранилище данных  
+// --- ХРАНИЛИЩЕ ДАННЫХ ---  
 const rooms = new Map();  
 const players = new Map();  
   
 io.on('connection', (socket) => {  
   console.log('User connected:', socket.id);  
   
-  // --- СОЗДАНИЕ КОМНАТЫ ---  
-  socket.on('create_room', (data) => {  
-    const { playerName } = data;  
-    const roomId = 'room_' + Math.random().toString(36).substr(2, 8);  
+  // --- 1. УПРАВЛЕНИЕ КОМНАТОЙ ---  
+  
+  socket.on('create_room', ({ playerName }) => {  
+    const roomId = 'room_' + Math.random().toString(36).substr(2, 6).toUpperCase(); // ID покороче и капсом  
       
     rooms.set(roomId, {  
       id: roomId,  
@@ -44,250 +39,189 @@ io.on('connection', (socket) => {
     });  
   
     const room = rooms.get(roomId);  
+    const playerData = { id: socket.id, name: playerName, score: 0, isHost: true };  
       
-    room.players.set(socket.id, {  
-      id: socket.id,  
-      name: playerName,  
-      score: 0,  
-      isHost: true  
-    });  
-  
-    players.set(socket.id, {  
-      id: socket.id,  
-      name: playerName,  
-      roomId: roomId  
-    });  
+    room.players.set(socket.id, playerData);  
+    players.set(socket.id, { id: socket.id, name: playerName, roomId });  
   
     socket.join(roomId);  
-    console.log(`Room $${roomId} created by $${playerName}`);  
-  
-    socket.emit('room_created', {  
-      roomId: roomId,  
-      player: room.players.get(socket.id)  
-    });  
+    socket.emit('room_created', { roomId, player: playerData });  
   });  
   
-  // --- ПРИСОЕДИНЕНИЕ К КОМНАТЕ ---  
-  socket.on('join_room', (data) => {  
-    const { roomId, playerName } = data;  
+  socket.on('join_room', ({ roomId, playerName }) => {  
+    // Приводим к одному регистру для удобства ввода  
+    const normalizedRoomId = roomId.trim();   
+    const room = rooms.get(normalizedRoomId);  
       
-    const room = rooms.get(roomId);  
     if (!room) {  
       socket.emit('join_error', { message: 'Комната не найдена' });  
       return;  
     }  
   
-    room.players.set(socket.id, {  
-      id: socket.id,  
-      name: playerName,  
-      score: 0,  
-      isHost: false  
-    });  
+    const playerData = { id: socket.id, name: playerName, score: 0, isHost: false };  
+    room.players.set(socket.id, playerData);  
+    players.set(socket.id, { id: socket.id, name: playerName, roomId: normalizedRoomId });  
   
-    players.set(socket.id, {  
-      id: socket.id,  
-      name: playerName,  
-      roomId: roomId  
-    });  
+    socket.join(normalizedRoomId);  
   
-    socket.join(roomId);  
-  
-    // Отправляем текущее состояние комнаты новому игроку  
+    // Отправляем данные: игроку (без спойлера фильма) и всем остальным  
     socket.emit('room_state', {  
-      movie: room.host === socket.id ? room.currentMovie : null, // Скрываем фильм от обычных игроков  
+      movie: room.host === socket.id ? room.currentMovie : null,  
       gameObjects: room.gameObjects,  
       players: Array.from(room.players.values())  
     });  
   
-    // Оповещаем всех остальных  
-    io.to(roomId).emit('player_joined', {  
-      player: room.players.get(socket.id),  
+    io.to(normalizedRoomId).emit('player_joined', {  
+      player: playerData,  
       players: Array.from(room.players.values())  
     });  
-  
-    console.log(`Player $${playerName} joined room $${roomId}`);  
   });  
   
-  // --- УПРАВЛЕНИЕ ОБЪЕКТАМИ ---  
-  socket.on('game_object_added', (data) => {  
+  // --- 2. ИГРОВОЙ ПРОЦЕСС ---  
+  
+  socket.on('start_game', () => {  
     const player = players.get(socket.id);  
     if (!player) return;  
     const room = rooms.get(player.roomId);  
-    if (!room) return;  
+    if (!room || room.host !== socket.id) return;  
   
-    room.gameObjects.push(data.object);  
-    socket.to(player.roomId).emit('game_object_added', data); // Используем socket.to чтобы не слать обратно отправителю (опционально)  
-  });  
-  
-  socket.on('game_object_removed', (data) => {  
-    const player = players.get(socket.id);  
-    if (!player) return;  
-    const room = rooms.get(player.roomId);  
-    if (!room) return;  
-  
-    room.gameObjects = room.gameObjects.filter(obj => obj.id !== data.objectId);  
-    socket.to(player.roomId).emit('game_object_removed', data);  
-  });  
-  
-  socket.on('game_object_updated', (data) => {  
-    const player = players.get(socket.id);  
-    if (!player) return;  
-    const room = rooms.get(player.roomId);  
-    if (!room) return;  
-  
-    const objIndex = room.gameObjects.findIndex(obj => obj.id === data.object.id);  
-    if (objIndex !== -1) {  
-      room.gameObjects[objIndex] = data.object;  
-    }  
-      
-    socket.to(player.roomId).emit('game_object_updated', data);  
-  });  
-  
-  socket.on('clear_game_field', (data) => {  
-    const player = players.get(socket.id);  
-    if (!player) return;  
-    const room = rooms.get(player.roomId);  
-    if (!room) return;  
-  
-    room.gameObjects = [];  
-    socket.to(player.roomId).emit('clear_game_field', data);  
-  });  
-  
-  // --- ЛОГИКА ИГРЫ ---  
-  socket.on('start_game', (data) => {  
-    const player = players.get(socket.id);  
-    if (!player) return;  
-  
-    const room = rooms.get(player.roomId);  
-    if (!room || room.host !== socket.id) return; // Только хост может менять фильм  
-  
-    // В реальности можно брать из API или большего списка  
+    // Список фильмов (можно расширить)  
     const movies = [  
-      { title: "Титаник", year: "1997" },  
-      { title: "Матрица", year: "1999" },  
-      { title: "Властелин Колец", year: "2001" },  
-      { title: "Гарри Поттер", year: "2001" },  
-      { title: "Звездные Войны", year: "1977" },  
-      { title: "Аватар", year: "2009" },  
-      { title: "Король Лев", year: "1994" },  
-      { title: "Пираты Карибского моря", year: "2003" },  
-      { title: "Холодное Сердце", year: "2013" },  
-      { title: "Назад в будущее", year: "1985" },  
-      { title: "Шрек", year: "2001" },  
-      { title: "Джокер", year: "2019" }  
+      { title: "Титаник", year: "1997" }, { title: "Матрица", year: "1999" },  
+      { title: "Властелин Колец", year: "2001" }, { title: "Гарри Поттер", year: "2001" },  
+      { title: "Звездные Войны", year: "1977" }, { title: "Аватар", year: "2009" },  
+      { title: "Король Лев", year: "1994" }, { title: "Шрек", year: "2001" },  
+      { title: "Назад в будущее", year: "1985" }, { title: "Оно", year: "2017" }  
     ];  
   
     room.currentMovie = movies[Math.floor(Math.random() * movies.length)];  
     room.gameState = 'playing';  
   
-    // Хосту показываем фильм  
+    // Хосту показываем фильм, остальным - уведомление  
     socket.emit('movie_reveal', room.currentMovie);  
-      
-    // Остальным говорим, что игра началась  
     socket.to(player.roomId).emit('game_started', {  
-      message: "Новый раунд! Создатель составляет сцену из фильма."  
+      message: "Игра началась! Ведущий загадал фильм."  
     });  
-  
-    console.log(`Game started in room $${player.roomId} with movie: $${room.currentMovie.title}`);  
   });  
   
-  // --- РУЧНОЕ ПОДТВЕРЖДЕНИЕ ПРАВИЛЬНОГО ОТВЕТА (ДОБАВЛЕНО) ---  
-  socket.on('correct_answer', (data) => {  
-    const hostPlayer = players.get(socket.id);  
-    if (!hostPlayer) return;  
-  
-    const room = rooms.get(hostPlayer.roomId);  
-    // Проверяем, что команду шлет хост  
-    if (!room || room.host !== socket.id) return;  
-  
-    const targetPlayerId = data.playerId;  
-    const targetPlayerData = room.players.get(targetPlayerId);  
-  
-    if (targetPlayerData) {  
-      targetPlayerData.score += 1;  
-  
-      io.to(hostPlayer.roomId).emit('player_scored', {  
-        playerId: targetPlayerId,  
-        playerName: targetPlayerData.name,  
-        newScore: targetPlayerData.score,  
-        message: "Ответ принят ведущим!"  
-      });  
+  // --- 3. ОБЪЕКТЫ НА ПОЛЕ ---  
+    
+  // Используем socket.to(...), чтобы не слать данные обратно отправителю (оптимизация)  
+  socket.on('game_object_added', (data) => {  
+    const player = players.get(socket.id);  
+    if (player && rooms.has(player.roomId)) {  
+      rooms.get(player.roomId).gameObjects.push(data.object);  
+      socket.to(player.roomId).emit('game_object_added', data);  
     }  
   });  
   
-  // --- ЧАТ И АВТО-ПРОВЕРКА ---  
-  socket.on('chat_message', (data) => {  
+  socket.on('game_object_removed', (data) => {  
+    const player = players.get(socket.id);  
+    if (player && rooms.has(player.roomId)) {  
+      const room = rooms.get(player.roomId);  
+      room.gameObjects = room.gameObjects.filter(obj => obj.id !== data.objectId);  
+      socket.to(player.roomId).emit('game_object_removed', data);  
+    }  
+  });  
+  
+  socket.on('game_object_updated', (data) => {  
+    const player = players.get(socket.id);  
+    if (player && rooms.has(player.roomId)) {  
+      const room = rooms.get(player.roomId);  
+      const idx = room.gameObjects.findIndex(obj => obj.id === data.object.id);  
+      if (idx !== -1) room.gameObjects[idx] = data.object;  
+      socket.to(player.roomId).emit('game_object_updated', data);  
+    }  
+  });  
+  
+  socket.on('clear_game_field', (data) => {  
+    const player = players.get(socket.id);  
+    if (player && rooms.has(player.roomId)) {  
+      rooms.get(player.roomId).gameObjects = [];  
+      socket.to(player.roomId).emit('clear_game_field', data);  
+    }  
+  });  
+  
+  // --- 4. ЧАТ И ОТВЕТЫ ---  
+  
+  // Ручное подтверждение ответа хостом (FIXED)  
+  socket.on('correct_answer', ({ playerId }) => {  
+    const host = players.get(socket.id);  
+    if (!host) return;  
+    const room = rooms.get(host.roomId);  
+      
+    if (room && room.host === socket.id) {  
+      const targetPlayer = room.players.get(playerId);  
+      if (targetPlayer) {  
+        targetPlayer.score += 1;  
+        io.to(room.id).emit('player_scored', {  
+          playerId,  
+          playerName: targetPlayer.name,  
+          newScore: targetPlayer.score,  
+          message: "Ведущий засчитал правильный ответ!"  
+        });  
+      }  
+    }  
+  });  
+  
+  socket.on('chat_message', ({ message }) => {  
     const player = players.get(socket.id);  
     if (!player) return;  
-  
     const room = rooms.get(player.roomId);  
     if (!room) return;  
   
-    const messageData = {  
-      type: 'chat_message',  
+    const msgData = {  
       playerId: socket.id,  
       playerName: player.name,  
-      message: data.message,  
-      timestamp: Date.now(),  
+      message,  
       isCorrect: false  
     };  
   
-    // Автоматическая проверка ответа  
+    // Автоматическая проверка (FIXED: строгая проверка)  
     if (room.currentMovie && room.gameState === 'playing' && socket.id !== room.host) {  
-        // Нормализация строк для сравнения  
-        const userAnswer = data.message.trim().toLowerCase().replace(/["«»]/g, '');  
-        const correctAnswer = room.currentMovie.title.toLowerCase().replace(/["«»]/g, '');  
+      const cleanUser = message.trim().toLowerCase().replace(/[^а-яa-z0-9]/gi, '');  
+      const cleanCorrect = room.currentMovie.title.toLowerCase().replace(/[^а-яa-z0-9]/gi, '');  
+        
+      if (cleanUser === cleanCorrect) {  
+        msgData.isCorrect = true;  
+        const pData = room.players.get(socket.id);  
+        pData.score += 1;  
           
-        // Используем строгое сравнение или проверку на полное вхождение для защиты от ложных срабатываний  
-        // (Например, чтобы "Оно" не сработало внутри слова "Звонок")  
-        if (userAnswer === correctAnswer) {  
-            messageData.isCorrect = true;  
-              
-            const playerData = room.players.get(socket.id);  
-            if (playerData) {  
-                playerData.score += 1;  
-                  
-                io.to(player.roomId).emit('player_scored', {  
-                    playerId: socket.id,  
-                    playerName: player.name,  
-                    newScore: playerData.score,  
-                    message: data.message  
-                });  
-            }  
-        }  
+        io.to(room.id).emit('player_scored', {  
+          playerId: socket.id,  
+          playerName: player.name,  
+          newScore: pData.score  
+        });  
+      }  
     }  
   
-    io.to(player.roomId).emit('chat_message', messageData);  
+    io.to(player.roomId).emit('chat_message', msgData);  
   });  
   
-  // --- ОТКЛЮЧЕНИЕ ---  
+  // --- 5. ОТКЛЮЧЕНИЕ ---  
+  
   socket.on('disconnect', () => {  
-    console.log('User disconnected:', socket.id);  
-      
     const player = players.get(socket.id);  
     if (player) {  
       const room = rooms.get(player.roomId);  
       if (room) {  
         room.players.delete(socket.id);  
           
-        // Если ушел хост, назначаем нового  
+        // Передача прав хоста  
         if (room.host === socket.id && room.players.size > 0) {  
           const newHostId = Array.from(room.players.keys())[0];  
           room.host = newHostId;  
+          const newHost = room.players.get(newHostId);  
+          newHost.isHost = true;  
             
-          const newHostPlayer = room.players.get(newHostId);  
-          if (newHostPlayer) {  
-            newHostPlayer.isHost = true;  
-              
-            io.to(player.roomId).emit('new_host', {  
-              newHostId: newHostId,  
-              newHostName: newHostPlayer.name  
-            });  
-              
-            // Показываем новому хосту текущий фильм, если игра идет  
-            if (room.currentMovie) {  
-                io.to(newHostId).emit('movie_reveal', room.currentMovie);  
-            }  
+          io.to(player.roomId).emit('new_host', {   
+            newHostId,   
+            newHostName: newHost.name   
+          });  
+            
+          // Показываем новому хосту текущий фильм  
+          if (room.currentMovie) {  
+            io.to(newHostId).emit('movie_reveal', room.currentMovie);  
           }  
         }  
   
@@ -296,19 +230,13 @@ io.on('connection', (socket) => {
           players: Array.from(room.players.values())  
         });  
   
-        // Удаляем комнату, если пустая  
         if (room.players.size === 0) {  
           rooms.delete(player.roomId);  
-          console.log(`Room ${player.roomId} deleted (empty)`);  
         }  
       }  
-        
       players.delete(socket.id);  
     }  
   });  
 });  
   
-const PORT = process.env.PORT || 3000;  
-server.listen(PORT, () => {  
-  console.log(`Server running on port ${PORT}`);  
-});  
+server.listen(3000, () => console.log('Server running on port 3000'));  
