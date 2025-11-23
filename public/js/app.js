@@ -91,24 +91,31 @@ class EmojinariumGame {
         }
     }
 
-    startNetworkGame() {
-        this.uiManager.showScreen('game');
-        
-        if (this.isHost) {
-            this.uiManager.toggleEmojiMenu(true);
-            this.uiManager.toggleChat(true);
-            this.generateNewMovie();
-            this.uiManager.initSections(this.gameEngine.emojiCategories, this);
-        } else {
-            this.uiManager.toggleEmojiMenu(false);
-            this.uiManager.toggleChat(true);
-            this.uiManager.toggleMovieDisplay(false);
-            this.createPlayerPlaceholder();
-        }
-        
-        this.initNetworkListeners();
-        this.updatePlayersList();
-    }
+    startNetworkGame() {  
+    this.uiManager.showScreen('game');  
+      
+    // --- ДОБАВЛЕНО: Показываем ID комнаты ---  
+    const currentRoomId = this.network.getCurrentRoomId();  
+    this.uiManager.updateRoomIdDisplay(currentRoomId);  
+    // ---------------------------------------  
+  
+    this.uiManager.initGameControls(  
+        () => this.generateNewMovie(),  
+        () => this.clearGameField(),  
+        () => this.disconnectGame(),  
+        this.isHost  
+    );  
+      
+    // ... остальной код метода без изменений ...  
+    if (this.isHost) {  
+       // ...  
+    } else {  
+       // ...  
+    }  
+      
+    this.initNetworkListeners();  
+    this.updatePlayersList();  
+}  
 
     startSingleGame() {
         this.gameMode = 'single';
