@@ -1,114 +1,98 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Эмоджинариум - Сетевая игра</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body>
-    <!-- Mode Selection Modal -->
-    <div class="modal" id="modeModal">
-        <div class="modal-content">
-            <h2>Выберите режим игры</h2>
-            <div class="mode-buttons">
-                <button class="mode-btn active" data-mode="single">Одиночная игра</button>
-                <button class="mode-btn" data-mode="network">Сетевая игра</button>
-            </div>
-            
-            <div class="server-settings" id="serverSettings">
-                <div class="form-group">
-                    <label for="playerName">Ваше имя:</label>
-                    <input type="text" id="playerName" placeholder="Введите ваше имя" value="Игрок">
-                </div>
-                
-                <div class="room-actions">
-                    <div class="form-group">
-                        <label for="roomId">ID комнаты:</label>
-                        <input type="text" id="roomId" placeholder="Введите ID комнаты">
-                    </div>
-                    
-                    <div class="action-buttons">
-                        <button class="action-btn create-room-btn" id="createRoomBtn">Создать комнату</button>
-                        <button class="action-btn join-room-btn" id="joinRoomBtn">Присоединиться</button>
-                    </div>
-                </div>
-                
-                <div id="networkStatus" class="status-message status-waiting">
-                    Выберите действие...
-                </div>
-            </div>
-            
-            <button class="start-btn" id="startBtn">Начать одиночную игру</button>
-        </div>
-    </div>
-
-    <!-- Game Interface -->
-    <div class="app">
-        <!-- Game Header -->
-       <!-- public/index.html -->  
-<div class="game-header" id="gameHeader">  
-    <div class="header-top">  
-        <div class="header-left">  
-            <div class="game-title">🎭 Эмоджинариум</div>  
-            <!-- ДОБАВЛЕНО: Блок для ID комнаты -->  
-            <div class="room-info-badge" id="roomInfoBadge" style="display: none;">  
-                ID: <span id="currentRoomIdDisplay">---</span> 📋  
+<!DOCTYPE html>  
+<html lang="ru">  
+<head>  
+    <meta charset="UTF-8">  
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+    <title>Эмоджинариум</title>  
+    <script src="/socket.io/socket.io.js"></script>  
+    <link rel="stylesheet" href="css/style.css">  
+</head>  
+<body>  
+    <!-- МОДАЛЬНОЕ ОКНО (МЕНЮ) -->  
+    <div class="modal" id="modeModal">  
+        <div class="modal-content">  
+            <h2>Выберите режим</h2>  
+            <div class="mode-buttons">  
+                <button class="mode-btn active" data-mode="single">Одиночная</button>  
+                <button class="mode-btn" data-mode="network">Сетевая</button>  
+            </div>  
+              
+            <div class="server-settings" id="serverSettings">  
+                <div class="form-group">  
+                    <label>Ваше имя:</label>  
+                    <input type="text" id="playerName" value="Игрок">  
+                </div>  
+                <div class="room-actions">  
+                    <div class="form-group">  
+                        <label>ID комнаты:</label>  
+                        <input type="text" id="roomId" placeholder="Введите ID для входа">  
+                    </div>  
+                    <div class="action-buttons">  
+                        <button class="action-btn create-room-btn" id="createRoomBtn">Создать</button>  
+                        <button class="action-btn join-room-btn" id="joinRoomBtn">Войти</button>  
+                    </div>  
+                </div>  
+                <div id="networkStatus" class="status-message status-waiting">Ожидание...</div>  
+            </div>  
+              
+            <button class="start-btn" id="startBtn">Начать одиночную игру</button>  
+        </div>  
+    </div>  
+  
+    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->  
+    <div class="app">  
+        <div class="game-header" id="gameHeader">  
+            <div class="header-top">  
+                <div class="header-left">  
+                    <div class="game-title">🎭 Эмоджинариум</div>  
+                    <!-- ДОБАВЛЕНО: Отображение ID комнаты -->  
+                    <div class="room-info-badge" id="roomInfoBadge" title="Нажмите, чтобы скопировать">  
+                        ID: <span id="currentRoomIdDisplay">---</span> 📋  
+                    </div>  
+                </div>  
+                  
+                <div class="game-controls">  
+                    <button class="control-btn clear-field-btn" id="clearFieldBtn">Очистить</button>  
+                    <button class="control-btn new-movie-btn" id="newMovieBtn">Новый фильм</button>  
+                    <button class="control-btn disconnect-btn" id="disconnectBtn">Выход</button>  
+                </div>  
+            </div>  
+              
+            <div class="movie-display" id="movieDisplay">  
+                <div class="movie-title" id="movieTitle"></div>  
+                <div class="movie-year" id="movieYear"></div>  
+                <div class="loading-movie" id="loadingMovie">Загрузка...</div>  
             </div>  
         </div>  
-        <div class="game-controls">  
-            <!-- Кнопки остаются без изменений -->  
-            <button class="control-btn clear-field-btn" id="clearFieldBtn">Очистить поле</button>  
-            <button class="control-btn new-movie-btn" id="newMovieBtn">Новый фильм</button>  
-            <button class="control-btn disconnect-btn" id="disconnectBtn">Отключиться</button>  
+  
+        <div class="container" id="gameContainer">  
+            <div class="menu" id="emojiMenu">  
+                <div class="sections-container" id="sectionsContainer"></div>  
+            </div>  
+              
+            <div class="game-field" id="gameField">  
+                <div class="field-placeholder">  
+                    <div class="icon">🎬</div>  
+                    <div>Перетащите эмодзи сюда!</div>  
+                </div>  
+            </div>  
+  
+            <div class="chat-section" id="chatSection">  
+                <div class="chat-header">Игроки и Чат</div>  
+                <div class="players-list" id="playersList"></div>  
+                <div class="chat-messages" id="chatMessages"></div>  
+                <div class="chat-input-container">  
+                    <input type="text" class="chat-input" id="chatInput" placeholder="Ответ...">  
+                    <button class="send-btn" id="sendBtn">Send</button>  
+                </div>  
+            </div>  
         </div>  
     </div>  
       
-    <div class="movie-display" id="movieDisplay">  
-        <!-- Без изменений -->  
-        <div class="movie-title" id="movieTitle">Загрузка фильма...</div>  
-        <div class="movie-year" id="movieYear"></div>  
-        <div class="loading-movie" id="loadingMovie">Получаем фильм из топов Кинопоиска...</div>  
+    <div class="instructions" id="instructions">  
+        <p>🖱️ Перетаскивайте эмодзи • 🔍 Колесико для размера • ❌ Двойной клик удалить</p>  
     </div>  
-</div>  
-
-
-        <!-- Game Area -->
-        <div class="container" id="gameContainer">
-            <div class="menu" id="emojiMenu">
-                <h2>📚 Библиотека эмодзи</h2>
-                <div class="sections-container" id="sectionsContainer"></div>
-            </div>
-            
-            <div class="game-field" id="gameField">
-                <div class="field-placeholder">
-                    <div class="icon">🎬</div>
-                    <div>Перетащите эмодзи сюда, чтобы составить сцену из фильма!</div>
-                </div>
-            </div>
-
-            <!-- Chat Section -->
-            <div class="chat-section" id="chatSection">
-                <div class="chat-header">💬 Чат игры</div>
-                <div class="players-list" id="playersList"></div>
-                <div class="chat-messages" id="chatMessages"></div>
-                <div class="chat-input-container">
-                    <input type="text" class="chat-input" id="chatInput" placeholder="Напишите ваш вариант ответа...">
-                    <button class="send-btn" id="sendBtn">Отправить</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="instructions" id="instructions">
-        <p>🎯 <strong>Создайте сцену из фильма используя эмодзи!</strong></p>
-        <p>✨ Нажмите на категорию чтобы открыть эмодзи • 🖱️ Перетаскивайте эмодзи на поле • 🔄 Перемещайте эмодзи мышью</p>
-        <p>🔍 Колесико мыши на эмодзи - изменение размера • ⟳ Зажмите и тяните ручку вращения для поворота • ❌ Двойной клик удаляет эмодзи</p>
-        <p>📚 В каждой игре доступны 20 случайных эмодзи из каждой категории • ESC - закрыть открытую секцию</p>
-        <p>🎬 Фильмы загружаются из топов Кинопоиска</p>
-    </div>
-
-    <script type="module" src="js/app.js"></script>
-</body>
-</html>
+  
+    <script type="module" src="js/app.js"></script>  
+</body>  
+</html>  
