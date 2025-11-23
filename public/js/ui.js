@@ -367,24 +367,33 @@ export class UIManager {
     }
 
     // Utility methods
-    showScreen(screen) {
-        const modal = document.getElementById('modeModal');
-        const gameHeader = document.getElementById('gameHeader');
-        const gameContainer = document.getElementById('gameContainer');
-        const instructions = document.getElementById('instructions');
-
-        if (screen === 'game') {
-            modal.style.display = 'none';
-            gameHeader.style.display = 'block';
-            gameContainer.style.display = 'flex';
-            instructions.classList.add('active');
-        } else if (screen === 'menu') {
-            gameHeader.style.display = 'none';
-            gameContainer.style.display = 'none';
-            instructions.classList.remove('active');
-            modal.style.display = 'flex';
-        }
-    }
+   showScreen(screen) {  
+    const modal = document.getElementById('modeModal');  
+    const gameHeader = document.getElementById('gameHeader');  
+    const gameContainer = document.getElementById('gameContainer');  
+    const instructions = document.getElementById('instructions');  
+  
+    if (screen === 'game') {  
+        modal.style.display = 'none';  
+        gameHeader.style.display = 'block';  
+        gameContainer.style.display = 'flex';  
+        instructions.classList.add('active');  
+    } else if (screen === 'menu') {  
+        gameHeader.style.display = 'none';  
+        gameContainer.style.display = 'none';  
+        instructions.classList.remove('active');  
+        modal.style.display = 'flex';  
+  
+        // --- ИСПРАВЛЕНИЕ: Сбрасываем состояние кнопок и текста ---  
+        document.getElementById('createRoomBtn').disabled = false;  
+        document.getElementById('joinRoomBtn').disabled = false;  
+          
+        const statusElement = document.getElementById('networkStatus');  
+        statusElement.textContent = 'Выберите действие...';  
+        statusElement.className = 'status-message status-waiting';  
+        // --------------------------------------------------------  
+    }  
+}  
 
     toggleEmojiMenu(show) {
         const emojiMenu = document.getElementById('emojiMenu');
