@@ -8,7 +8,6 @@
     <link rel="stylesheet" href="css/style.css">  
 </head>  
 <body>  
-    <!-- МОДАЛЬНОЕ ОКНО (МЕНЮ) -->  
     <div class="modal" id="modeModal">  
         <div class="modal-content">  
             <h2>Выберите режим</h2>  
@@ -39,13 +38,11 @@
         </div>  
     </div>  
   
-    <!-- ОСНОВНОЕ ПРИЛОЖЕНИЕ -->  
     <div class="app">  
         <div class="game-header" id="gameHeader">  
             <div class="header-top">  
                 <div class="header-left">  
                     <div class="game-title">🎭 Эмоджинариум</div>  
-                    <!-- ДОБАВЛЕНО: Отображение ID комнаты -->  
                     <div class="room-info-badge" id="roomInfoBadge" title="Нажмите, чтобы скопировать">  
                         ID: <span id="currentRoomIdDisplay">---</span> 📋  
                     </div>  
@@ -61,15 +58,16 @@
             <div class="movie-display" id="movieDisplay">  
                 <div class="movie-title" id="movieTitle"></div>  
                 <div class="movie-year" id="movieYear"></div>  
-                <div class="loading-movie" id="loadingMovie">Загрузка...</div>  
             </div>  
         </div>  
   
         <div class="container" id="gameContainer">  
+            <!-- Левая колонка: Меню (только для хоста) -->  
             <div class="menu" id="emojiMenu">  
                 <div class="sections-container" id="sectionsContainer"></div>  
             </div>  
               
+            <!-- Центральная колонка: Поле -->  
             <div class="game-field" id="gameField">  
                 <div class="field-placeholder">  
                     <div class="icon">🎬</div>  
@@ -77,6 +75,7 @@
                 </div>  
             </div>  
   
+            <!-- Правая колонка: Чат (для всех) -->  
             <div class="chat-section" id="chatSection">  
                 <div class="chat-header">Игроки и Чат</div>  
                 <div class="players-list" id="playersList"></div>  
