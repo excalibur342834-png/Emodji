@@ -117,17 +117,23 @@ class EmojinariumGame {
     this.updatePlayersList();  
 }  
 
-    startSingleGame() {
-        this.gameMode = 'single';
-        this.isHost = true;
-        
-        this.uiManager.showScreen('game');
-        this.uiManager.toggleEmojiMenu(true);
-        this.uiManager.toggleChat(false);
-        
-        this.generateNewMovie();
-        this.uiManager.initSections(this.gameEngine.emojiCategories, this);
-    }
+   // public/js/app.js  
+  
+startSingleGame(playerName = 'Игрок') {  
+    this.gameMode = 'single';  
+    this.isHost = true;  
+      
+    this.uiManager.showScreen('game');  
+    // --- ДОБАВЛЕНО: Скрываем ID комнаты в одиночной игре ---  
+    this.uiManager.updateRoomIdDisplay(null);   
+    // ------------------------------------------------------  
+  
+    this.uiManager.toggleEmojiMenu(true);  
+    this.uiManager.toggleChat(false);  
+      
+    // ... остальной код метода ...  
+}  
+
 
     initNetworkListeners() {
         // Chat messages
